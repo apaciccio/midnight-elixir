@@ -1,0 +1,5 @@
+.godot/
+export/
+*.import
+shot_*.png
+fs_*.png

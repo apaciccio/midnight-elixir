@@ -1,0 +1,16 @@
+config_version=5
+
+[application]
+config/name="Midnight Elixir"
+run/main_scene="res://menu.tscn"
+config/features=PackedStringArray("4.6")
+
+[display]
+window/size/viewport_width=1152
+window/size/viewport_height=648
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true

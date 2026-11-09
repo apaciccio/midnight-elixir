@@ -4,13 +4,20 @@ config_version=5
 config/name="Midnight Elixir"
 run/main_scene="res://menu.tscn"
 config/features=PackedStringArray("4.6")
+config/version="1.1.0"
+config/icon="res://icon.png"
 
 [display]
 window/size/viewport_width=1152
 window/size/viewport_height=648
 window/stretch/mode="canvas_items"
 window/stretch/aspect="keep"
+window/handheld/orientation=4
 
 [rendering]
 renderer/rendering_method="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
+
+[input_devices]
+pointing/emulate_mouse_from_touch=true
+pointing/emulate_touch_from_mouse=false

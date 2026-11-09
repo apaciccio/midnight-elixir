@@ -42,6 +42,7 @@ const TESTI := {
 	"fs_giri":  {"it": "%d GIRI", "en": "%d SPINS", "es": "%d GIROS", "de": "%d SPINS", "fr": "%d TOURS", "pt": "%d RODADAS", "ru": "%d СПИНОВ"},
 	"fs_vinto": {"it": "HAI VINTO", "en": "YOU WON", "es": "HAS GANADO", "de": "GEWONNEN", "fr": "TU AS GAGNÉ", "pt": "GANHASTE", "ru": "ВЫ ВЫИГРАЛИ"},
 	"menu":     {"it": "MENU", "en": "MENU", "es": "MENÚ", "de": "MENÜ", "fr": "MENU", "pt": "MENU", "ru": "МЕНЮ"},
+	"ricarica": {"it": "+1.000 CREDITI DI CORTESIA", "en": "+1,000 COURTESY CREDITS", "es": "+1.000 CRÉDITOS DE CORTESÍA", "de": "+1.000 GRATIS-CREDITS", "fr": "+1 000 CRÉDITS OFFERTS", "pt": "+1.000 CRÉDITOS DE CORTESIA", "ru": "+1 000 БОНУСНЫХ КРЕДИТОВ"},
 	"finite":  {"it": "Crediti finiti!", "en": "Out of credits!", "es": "¡Sin créditos!", "de": "Kein Guthaben mehr!", "fr": "Plus de crédits !", "pt": "Acabaram os créditos!", "ru": "Кредиты кончились!"},
 
 	# ---- MENU ----

@@ -1,5 +1,8 @@
-.godot/
-export/
 *.import
-shot_*.png
+*.keystore
+.godot/
+android/
+export/
 fs_*.png
+project.godot.bak
+shot_*.png

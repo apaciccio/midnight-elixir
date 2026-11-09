@@ -1,5 +1,7 @@
 # ================================================================
-# main.gd - MIDNIGHT ELIXIR (gioco 3) - v1.0
+# main.gd - MIDNIGHT ELIXIR (gioco 3) - v1.1
+# v1.1: saldo e puntata SALVATI su disco (user://elixir_save.cfg); a crediti finiti
+#   ricarica di cortesia +1.000 (come Heist/Case); impostazioni mobile.
 # Griglia 6x5 pay-anywhere + cascata. Consuma i "passi" del motore
 # (slot_engine.gd, collect=true) per animare il tumble.
 # Convenzioni HUD/tasti riprese da Midnight Case.
@@ -8,6 +10,9 @@ extends Node2D
 
 # DEBUG: true = il tasto F forza i free spin (SOLO per collaudo, mai in release)
 const DEBUG_FS_KEY := false
+const SAVE_PATH := "user://elixir_save.cfg"
+const START_BALANCE := 1000.0
+const COURTESY := 1000.0
 
 const ENG := preload("res://slot_engine.gd")
 const LNG := preload("res://lang.gd")
@@ -106,11 +111,14 @@ func _ready() -> void:
 	_build_hud()
 	_build_mago()
 	_build_audio()
+	_load_save()
 	if Engine.has_meta("me_bet"):
 		bet = float(Engine.get_meta("me_bet"))
 	Engine.set_meta("me_bet", bet)
 	_update_hud()
 	_play_music("music_base")
+	if balance < 10.0:
+		_courtesy_refill()
 	# griglia iniziale a caso
 	var g = engine.new_grid(false)
 	_set_grid_instant(g)
@@ -463,6 +471,8 @@ func _do_spin() -> void:
 	if spinning:
 		return
 	if balance < bet:
+		if balance < 10.0:
+			_courtesy_refill()
 		return
 	spinning = true
 	balance -= bet
@@ -513,6 +523,7 @@ func _do_spin() -> void:
 	_set_mult(1)
 	_update_hud()
 	spinning = false
+	_save_game()
 
 	if autospin_left > 0:
 		autospin_left -= 1
@@ -985,6 +996,34 @@ func _gemma(pos: Vector2, col: Color) -> void:
 	g.color = col
 	g.position = pos
 	grid_root.add_child(g)
+
+# ------------------------------ SALVATAGGIO ------------------------------
+func _save_game() -> void:
+	var cf := ConfigFile.new()
+	cf.set_value("gioco", "balance", balance)
+	cf.set_value("gioco", "bet", bet)
+	cf.save(SAVE_PATH)
+
+func _load_save() -> void:
+	var cf := ConfigFile.new()
+	if cf.load(SAVE_PATH) != OK:
+		return
+	balance = float(cf.get_value("gioco", "balance", START_BALANCE))
+	var b := float(cf.get_value("gioco", "bet", 10.0))
+	if b in [10.0, 20.0, 50.0, 100.0, 200.0]:
+		bet = b
+		Engine.set_meta("me_bet", bet)
+
+func _courtesy_refill() -> void:
+	balance += COURTESY
+	_update_hud()
+	_save_game()
+	_popup_text(T("ricarica"), Color("#a0f0ff"), 34)
+	_sfx("win_small")
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:
+		_save_game()
 
 # ------------------------------ AUDIO ------------------------------
 func _build_audio() -> void:

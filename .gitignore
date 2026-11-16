@@ -6,3 +6,5 @@ export/
 fs_*.png
 project.godot.bak
 shot_*.png
+
+.plugin_dl/

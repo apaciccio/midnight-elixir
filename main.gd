@@ -1,5 +1,8 @@
 # ================================================================
-# main.gd - MIDNIGHT ELIXIR (gioco 3) - v1.1
+# main.gd - MIDNIGHT ELIXIR (gioco 3) - v1.2
+# v1.2: NEGOZIO MONETE come Heist/Case: tasto "+" accanto a SALDO (o tocco sul
+#   saldo) apre shop_panel.gd; acquisti con l'autoload Shop (Google Play su
+#   Android, App Store su iPhone, PROVA su Mac). Motore e pesi NON cambiano.
 # v1.1: saldo e puntata SALVATI su disco (user://elixir_save.cfg); a crediti finiti
 #   ricarica di cortesia +1.000 (come Heist/Case); impostazioni mobile.
 # Griglia 6x5 pay-anywhere + cascata. Consuma i "passi" del motore
@@ -56,6 +59,11 @@ var bet := 10.0
 var spinning := false
 var turbo := false
 var autospin_left := 0
+
+# negozio monete (v1.2)
+var shop_btn: Button = null
+var shop_aperto := false
+const SHOP_PANEL := preload("res://shop_panel.gd")
 
 # HUD
 var lbl_balance: Label
@@ -116,6 +124,10 @@ func _ready() -> void:
 		bet = float(Engine.get_meta("me_bet"))
 	Engine.set_meta("me_bet", bet)
 	_update_hud()
+	var sh := _shop()
+	if sh != null:
+		sh.monete_arrivate.connect(func(_n): _incassa_acquisti())
+	_incassa_acquisti.call_deferred()
 	_play_music("music_base")
 	if balance < 10.0:
 		_courtesy_refill()
@@ -727,6 +739,30 @@ func _build_hud() -> void:
 	lbl_balance = _mk_label("1000", 16, 600, 140, 34, Color("#ffe9b0"))
 	lbl_balance.add_theme_font_size_override("font_size", 26)
 	_outline(lbl_balance)
+	# negozio: tocco sul saldo o tasto "+" accanto alla scritta SALDO
+	lbl_balance.mouse_filter = Control.MOUSE_FILTER_STOP
+	lbl_balance.gui_input.connect(func(ev: InputEvent):
+		if (ev is InputEventMouseButton and ev.pressed) or (ev is InputEventScreenTouch and ev.pressed):
+			_apri_negozio())
+	shop_btn = Button.new()
+	shop_btn.text = "+"
+	shop_btn.position = Vector2(92, 580)
+	shop_btn.size = Vector2(22, 22)
+	shop_btn.add_theme_font_size_override("font_size", 17)
+	var sb_n := StyleBoxFlat.new()
+	sb_n.bg_color = Color("#e3b04b"); sb_n.set_corner_radius_all(11)
+	sb_n.border_color = Color("#ffe9a8"); sb_n.set_border_width_all(2)
+	sb_n.set_content_margin_all(0)
+	var sb_h := sb_n.duplicate(); sb_h.bg_color = Color("#ffe9a8")
+	shop_btn.add_theme_stylebox_override("normal", sb_n)
+	shop_btn.add_theme_stylebox_override("hover", sb_h)
+	shop_btn.add_theme_stylebox_override("pressed", sb_h)
+	shop_btn.add_theme_color_override("font_color", Color("#2a1c05"))
+	shop_btn.add_theme_color_override("font_hover_color", Color("#2a1c05"))
+	shop_btn.add_theme_color_override("font_pressed_color", Color("#2a1c05"))
+	shop_btn.pressed.connect(_apri_negozio)
+	add_child(shop_btn)
+	shop_btn.size = Vector2(22, 22)
 
 	bet_chip = _btn_img("chip_bet", 158, 584, 58, 58, T("bet"), Color("#3b3168"))
 	bet_chip.pressed.connect(_apri_bet)
@@ -997,6 +1033,33 @@ func _gemma(pos: Vector2, col: Color) -> void:
 	g.position = pos
 	grid_root.add_child(g)
 
+# ------------------------------ NEGOZIO MONETE ------------------------------
+func _apri_negozio() -> void:
+	if shop_aperto or spinning or autospin_left != 0:
+		return
+	shop_aperto = true
+	var p: Control = SHOP_PANEL.new()
+	p.chiuso.connect(func(): shop_aperto = false)
+	add_child(p)
+
+func _shop() -> Node:
+	return get_node_or_null("/root/Shop")
+
+func _incassa_acquisti() -> void:
+	var sh := _shop()
+	if sh == null:
+		return
+	var n: int = sh.in_attesa()
+	if n <= 0:
+		return
+	balance += float(n)
+	_update_hud()
+	_save_game()                 # prima salvo il saldo...
+	sh.segna_incassate(n)        # ...poi segno le monete come incassate
+	if not spinning:
+		_popup_text(T("shop_incassate") % SHOP_PANEL.migliaia(n), Color("#ffe27a"), 40)
+		_sfx("win_small")
+
 # ------------------------------ SALVATAGGIO ------------------------------
 func _save_game() -> void:
 	var cf := ConfigFile.new()
@@ -1150,6 +1213,8 @@ func _process(delta: float) -> void:
 			idle_play_t = 0.0
 
 func _unhandled_input(event: InputEvent) -> void:
+	if shop_aperto:
+		return   # con il negozio aperto la tastiera non tocca il gioco
 	if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
 		_on_spin_pressed()
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:

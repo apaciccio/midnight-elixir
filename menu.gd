@@ -1,6 +1,7 @@
 # ================================================================
 # menu.gd - MIDNIGHT ELIXIR - schermata iniziale (stile Heist/Case)
-# fix iPhone (nov 2026): cambio lingua con ricostruzione differita sicura
+# fix iPhone (nov 2026): scelta lingua con tasto + elenco di tasti normali
+#   (niente tendina di sistema: dopo il cambio lingua i tasti non rispondevano)
 # lingue via lang.gd, tasti oro, legenda con immagini e vincite x puntata
 # ================================================================
 extends Node2D
@@ -98,34 +99,95 @@ func _build() -> void:
 		_gold_button(T("come"), bx, 392, 320, 56, 22, false).pressed.connect(_on_legend)
 		_gold_button(T("esci"), bx, 464, 320, 52, 22, false).pressed.connect(_on_esci)
 
-	# lingua: rilevata dal dispositivo; tendina compatta per cambiarla
-	var ob := OptionButton.new()
-	ob.add_theme_font_size_override("font_size", 15)
-	var idx := 0
+	# lingua: tasto + elenco fatto di normali Button (niente tendina di sistema:
+	# su iPhone la tendina OptionButton bloccava i tocchi dopo il cambio lingua)
+	_crea_scelta_lingua()
+
+# ---- scelta lingua (v. fix iPhone) ----------------------------------------
+# Tasto in alto a sinistra che apre un elenco di 7 tasti normali. Toccando
+# una lingua si chiude l'elenco e, un frame dopo, il menu si ricostruisce.
+# Tocco fuori dall'elenco = chiude. Nessuna finestra/popup di sistema.
+var _rifacendo := false
+
+func _stile_lingua(colore: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = colore
+	sb.border_color = Color(0.96, 0.72, 0.25, 0.8)
+	sb.border_width_top = 1; sb.border_width_bottom = 1
+	sb.border_width_left = 1; sb.border_width_right = 1
+	sb.corner_radius_top_left = 8; sb.corner_radius_top_right = 8
+	sb.corner_radius_bottom_left = 8; sb.corner_radius_bottom_right = 8
+	sb.content_margin_left = 12; sb.content_margin_right = 12
+	return sb
+
+func _crea_scelta_lingua() -> void:
+	# il tasto vecchio e' in coda di cancellazione: gli cambio nome per liberare "TastoLingua"
+	var vecchio := get_node_or_null("TastoLingua")
+	if vecchio != null:
+		vecchio.name = "TastoLingua_vecchio"
+	var tasto := Button.new()
+	tasto.name = "TastoLingua"
+	tasto.text = LNG.NOMI[_lang()]
+	tasto.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	tasto.focus_mode = Control.FOCUS_NONE
+	tasto.add_theme_font_size_override("font_size", 15)
+	tasto.add_theme_stylebox_override("normal", _stile_lingua(Color(0.05, 0.06, 0.1, 0.85)))
+	tasto.add_theme_stylebox_override("hover", _stile_lingua(Color(0.1, 0.12, 0.2, 0.95)))
+	tasto.add_theme_stylebox_override("pressed", _stile_lingua(Color(0.15, 0.17, 0.28, 0.95)))
+	add_child(tasto)
+	tasto.position = Vector2(20, 20)
+	tasto.size = Vector2(150, 38)
+	# freccina disegnata (non dipende dal font)
+	var fr := Polygon2D.new()
+	fr.polygon = PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(5, 6)])
+	fr.color = Color(0.96, 0.72, 0.25)
+	fr.position = Vector2(128, 16)
+	tasto.add_child(fr)
+	tasto.pressed.connect(_apri_lingue)
+
+func _apri_lingue() -> void:
+	if _rifacendo: return
+	var aperto := get_node_or_null("SceltaLingua")
+	if aperto != null:
+		aperto.name = "SceltaLingua_chiusa"
+		aperto.queue_free()
+		return
+	var velo := Control.new()
+	velo.name = "SceltaLingua"
+	velo.size = Vector2(VW, VH)
+	velo.mouse_filter = Control.MOUSE_FILTER_STOP
+	velo.z_index = 100
+	velo.gui_input.connect(func(e: InputEvent) -> void:
+		if (e is InputEventMouseButton or e is InputEventScreenTouch) and e.is_pressed():
+			velo.name = "SceltaLingua_chiusa"
+			velo.queue_free())
+	var pan := Panel.new()
+	pan.add_theme_stylebox_override("panel", _stile_lingua(Color(0.05, 0.06, 0.1, 0.96)))
+	velo.add_child(pan)
+	pan.position = Vector2(20, 62)
+	pan.size = Vector2(150, LNG.LINGUE.size() * 36 + 10)
 	for i in LNG.LINGUE.size():
 		var code: String = LNG.LINGUE[i]
-		ob.add_item(LNG.NOMI[code], i)
-		if code == _lang():
-			idx = i
-	ob.select(idx)
-	ob.item_selected.connect(func(i2: int) -> void:
-		Engine.set_meta("mh_lang", LNG.LINGUE[i2])
-		_cambia_lingua.call_deferred(ob))
-	add_child(ob)
-	ob.position = Vector2(20, 20)
-	ob.size = Vector2(150, 38)
+		var b := Button.new()
+		b.text = LNG.NOMI[code]
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.focus_mode = Control.FOCUS_NONE
+		b.flat = code != _lang()
+		b.add_theme_font_size_override("font_size", 15)
+		pan.add_child(b)
+		b.position = Vector2(5, 5 + i * 36)
+		b.size = Vector2(140, 34)
+		b.pressed.connect(_scegli_lingua.bind(code))
+	add_child(velo)
 
-# Cambio lingua (fix iPhone): si chiude la tendina, si aspettano due frame
-# e solo dopo si ricostruisce il menu; ignora i doppi tocchi nel frattempo.
-var _rifacendo := false
-func _cambia_lingua(ob: OptionButton) -> void:
+func _scegli_lingua(code: String) -> void:
 	if _rifacendo: return
 	_rifacendo = true
-	if is_instance_valid(ob):
-		ob.get_popup().hide()
-		ob.disabled = true
-		ob.release_focus()
-	await get_tree().process_frame
+	Engine.set_meta("mh_lang", code)
+	var aperto := get_node_or_null("SceltaLingua")
+	if aperto != null:
+		aperto.name = "SceltaLingua_chiusa"
+		aperto.queue_free()
 	await get_tree().process_frame
 	_build()
 	_rifacendo = false

@@ -1,5 +1,6 @@
 # ================================================================
 # menu.gd - MIDNIGHT ELIXIR - schermata iniziale (stile Heist/Case)
+# fix iPhone (nov 2026): cambio lingua con ricostruzione differita sicura
 # lingue via lang.gd, tasti oro, legenda con immagini e vincite x puntata
 # ================================================================
 extends Node2D
@@ -109,10 +110,25 @@ func _build() -> void:
 	ob.select(idx)
 	ob.item_selected.connect(func(i2: int) -> void:
 		Engine.set_meta("mh_lang", LNG.LINGUE[i2])
-		call_deferred("_build"))
+		_cambia_lingua.call_deferred(ob))
 	add_child(ob)
 	ob.position = Vector2(20, 20)
 	ob.size = Vector2(150, 38)
+
+# Cambio lingua (fix iPhone): si chiude la tendina, si aspettano due frame
+# e solo dopo si ricostruisce il menu; ignora i doppi tocchi nel frattempo.
+var _rifacendo := false
+func _cambia_lingua(ob: OptionButton) -> void:
+	if _rifacendo: return
+	_rifacendo = true
+	if is_instance_valid(ob):
+		ob.get_popup().hide()
+		ob.disabled = true
+		ob.release_focus()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_build()
+	_rifacendo = false
 
 func _gold_button(text: String, x: float, y: float, w: float, h: float, fsize: int, gold: bool = true) -> BaseButton:
 	# tasto ILLUSTRATO se c'e' assets/tasto_menu.png (targa vuota: il testo lo scrive il codice)
